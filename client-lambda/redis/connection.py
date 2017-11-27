@@ -541,6 +541,50 @@ class Connection(object):
             raise err
         raise socket.error("socket.getaddrinfo returned an empty list")
 
+    def send_fast_tcp(self, item):
+        # we want to mimic what socket.create_connection does to support
+        # ipv4/ipv6, but we want to set options prior to calling
+        # socket.connect()
+        err = None
+        for res in socket.getaddrinfo(self.host, self.port, 0,
+                                      socket.SOCK_STREAM):
+            family, socktype, proto, canonname, socket_address = res
+            sock = None
+            try:
+                sock = socket.socket(family, socktype, proto)
+                # TCP_NODELAY
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+                # TCP_KEEPALIVE
+                if self.socket_keepalive:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                    for k, v in iteritems(self.socket_keepalive_options):
+                        sock.setsockopt(socket.SOL_TCP, k, v)
+
+                # MSG_FASTOPEN
+                sock.setsockopt(socket.SOL_TCP, 23, 5)
+
+                # set the socket_connect_timeout before we connect
+                sock.settimeout(self.socket_connect_timeout)
+
+                # send the first item along with the SYN packet
+                sock.sendto(item, 536870912, (self.host, self.port))
+            except socket.error as _:
+                err = _
+                if sock is not None:
+                    sock.close()
+                raise err
+
+            self._sock = sock
+            try:
+                self.on_connect()
+            except RedisError:
+                # clean up after any error in on_connect
+                self.disconnect()
+
+        if err is not None:
+            raise err
+
     def _error_message(self, exception):
         # args for socket.error can either be (errno, "message")
         # or just "message"
@@ -581,13 +625,14 @@ class Connection(object):
 
     def send_packed_command(self, command):
         "Send an already packed command to the Redis server"
-        if not self._sock:
-            self.connect()
         try:
             if isinstance(command, str):
                 command = [command]
             for item in command:
-                self._sock.sendall(item)
+                if not self._sock:
+                    self.send_fast_tcp(item)
+                else:
+                    self._sock.sendall(item)
         except socket.timeout:
             self.disconnect()
             raise TimeoutError("Timeout writing to socket")

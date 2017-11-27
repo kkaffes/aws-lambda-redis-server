@@ -1,26 +1,17 @@
 from __future__ import print_function
 import uuid
 import redis
-import subprocess
 
 # Initialize Redis Client
-r = redis.Redis(unix_socket_path='/tmp/redis.sock')
+# FIXME Add redis server id here when known
+r = redis.Redis()
 
 
 def handler(event, context):
     """
-    This function starts a redis server and puts and gets an element from it.
+    This function connects to a redis server and puts and gets an
+    element from it.
     """
-
-    subprocess.Popen(['./redis-server', './redis.conf'])
-
-    # Wait for Redis to start
-    while True:
-        try:
-            foo = r.get('dummy')
-            break
-        except redis.exceptions.ConnectionError:
-            pass
 
     # Create a random UUID... this will be the sample element we add to redis.
     uuid_inserted = uuid.uuid4().hex
@@ -30,7 +21,7 @@ def handler(event, context):
     uuid_obtained = r.get('uuid')
     if uuid_obtained == uuid_inserted:
         # This print should go to the CloudWatch Logs and Lambda console.
-        print("Success: Fetched value %s from memcache" % (uuid_inserted))
+        print("Success: Fetched value %s from redis" % (uuid_inserted))
     else:
         raise Exception("Value is not the same as we put :(."
                         " Expected %s got %s" % (uuid_inserted, uuid_obtained))
