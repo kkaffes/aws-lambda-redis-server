@@ -2,3 +2,4 @@ server-lambda/redis-server
 server-lambda/app.zip
 client-lambda/app.zip
 client-lambda/redis/*.pyc
+deps/*

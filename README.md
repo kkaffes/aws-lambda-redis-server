@@ -2,19 +2,17 @@ What is this repository?
 ------------------------
 
 This repository contains everything needed to build an AWS Lambda function
-that starts a local Redis server listening to a Unix Domain Socket and tests
-whether it is working by putting and a getting a value.
+that starts a Redis server and a different AWS Lambda function that can
+connect to the Redis server hosted in the first.
 
 Instructions
 ------------
 
-The only thing needed is to build a statically linked version of Redis server
-and store it as redis-server in the root of this repository.
+The only thing needed is to build a modified statically linked version of
+Redis server. This can be done easily by running:
 
-Download Redis from Github, branch 4.0, and build it using:
+    ./install_deps.sh
 
-    make CFLAGS="-static" EXEEXT="-static" LDFLAGS="-I/usr/local/include/"
-
-Create the .zip file needed by AWS Lambda by running:
+Create the .zip file needed for each AWS Lambda function by running:
 
     zip app.zip *
