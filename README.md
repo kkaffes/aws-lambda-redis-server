@@ -8,10 +8,13 @@ connect to the Redis server hosted in the first.
 Instructions
 ------------
 
-The only thing needed is to build a modified statically linked version of
-Redis server. This can be done easily by running:
+You need to build a modified statically linked version of Redis server.
+This can be done easily by running:
 
     ./install_deps.sh
+
+If you want to build and run the example code for port reuse, you need to have
+Linux kernel version >= 4.6.
 
 Create the .zip file needed for each AWS Lambda function by running:
 
